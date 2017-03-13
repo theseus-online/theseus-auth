@@ -1,0 +1,3 @@
+/login              LoginR          GET
+/logout             LogoutR         GET
+/github-callback    GithubCallbackR GET
