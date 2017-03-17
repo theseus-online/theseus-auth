@@ -7,7 +7,7 @@ clientSecret    :: String
 clientSecret    = "a146ae62e81ca889d7393bb9c059b91c831b2af5"
 
 backUrl         :: String
-backUrl         = "http://theseus.online/github-callback"
+backUrl         = "http://theseus.online/auth/github-callback"
 
 homePage        :: String
 homePage        = "http://theseus.online"

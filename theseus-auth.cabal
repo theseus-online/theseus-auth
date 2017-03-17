@@ -26,5 +26,3 @@ executable          theseus-auth
                 , lens
                 , lens-aeson
                 , mtl
-
-  ghc-options:    -threaded -O2 -rtsopts -with-rtsopts=-N
