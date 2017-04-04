@@ -8,7 +8,7 @@ import Data.Aeson (object, (.=), encode)
 import Data.Aeson.Lens (_String, key)
 import Control.Monad.Trans (liftIO)
 import Control.Lens ((.~), (^.), (&))
-import Network.Wreq (param, defaults, responseBody, getWith, header)
+import Network.Wreq (FormParam((:=)), param, defaults, responseBody, getWith, header, post)
 import Web.Cookie (setCookieName, setCookiePath, setCookieValue, setCookieMaxAge, def)
 import qualified Yesod.Core as C
 import qualified Data.ByteString.Char8 as B
@@ -60,11 +60,19 @@ getGithubCallbackR = do
         processToken token = do
             let opts = defaults & param "access_token" .~ [T.pack token]
             resp <- liftIO $ getWith opts githubUserUrl
-            return $ LB.unpack $ encode $ object [
-                                                    "username" .= (resp ^. responseBody . key "login" . _String), 
-                                                    "avatar" .= (resp ^. responseBody . key "avatar_url" . _String),
-                                                    "email" .= (resp ^. responseBody . key "email" . _String)]
-
+            let name = resp ^. responseBody . key "login" . _String
+            let email = resp ^. responseBody . key "email" . _String
+            let avatar = resp ^. responseBody . key "avatar_url" . _String
+            _ <- liftIO $ post (dbInterface ++ "/rpc/create_or_update_user") [ "name" := name
+                                                                             , "email" := email
+                                                                             , "avatar" := avatar
+                                                                             ]
+            let infoStr = LB.unpack $ encode $ object [ "name" .= name
+                                                      , "email" .= email
+                                                      , "avatar" .= avatar
+                                                      ]
+            return infoStr
+            
         setUserInfo :: String -> C.HandlerT App IO ()
         setUserInfo info = do
             let c = def { 

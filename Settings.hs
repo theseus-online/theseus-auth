@@ -26,3 +26,6 @@ githubUserUrl   = "https://api.github.com/user"
 
 userInfoKey     :: String
 userInfoKey     = "theseus-userinfo"
+
+dbInterface     ::String
+dbInterface     = "http://db.theseus-online"
