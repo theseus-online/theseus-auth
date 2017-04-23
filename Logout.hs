@@ -9,5 +9,7 @@ import qualified Data.Text as T
 
 getLogoutR :: Handler Html
 getLogoutR = do
-    deleteCookie (T.pack userInfoKey) "/"
-    redirect homePage
+    key <- liftIO (theseusConfig >>= \c -> return $ theseusUserInfoKey c)
+    home <- liftIO (theseusConfig >>= \c -> return $ theseusHomePage c)
+    deleteCookie (T.pack key) "/"
+    redirect home

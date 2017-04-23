@@ -17,11 +17,15 @@ import qualified Data.Text as T
 
 getLoginR :: Handler C.Html
 getLoginR = do
+    backUrl <- liftIO (theseusConfig >>= \c -> return $ githubBackUrl c)
+    homePage <- liftIO (theseusConfig >>= \c -> return $ theseusHomePage c)
+    clientID <- liftIO (theseusConfig >>= \c -> return $ githubClientID c)
+    authUrl <- liftIO (theseusConfig >>= \c -> return $ githubAuthUrl c)
     urlMaybe <- C.lookupGetParam "back_url"
     case urlMaybe of
-        Just url -> C.redirect $ T.pack (buildUrl githubAuthUrl [("client_id", clientID), ("redirect_uri", backUrl), ("state", T.unpack url)]) 
-        Nothing -> C.redirect $ T.pack (buildUrl githubAuthUrl [("client_id", clientID), ("redirect_uri", backUrl), ("state", homePage)])
-    where 
+        Just url -> C.redirect $ T.pack (buildUrl authUrl [("client_id", clientID), ("redirect_uri", backUrl), ("state", T.unpack url)])
+        Nothing -> C.redirect $ T.pack (buildUrl authUrl [("client_id", clientID), ("redirect_uri", backUrl), ("state", homePage)])
+    where
         buildUrl :: String -> [(String, String)] -> String
         buildUrl uri ps = uri ++ "?" ++ buildParams ps
 
@@ -30,6 +34,7 @@ getLoginR = do
 
 getGithubCallbackR :: Handler C.Html
 getGithubCallbackR = do
+    homePage <- liftIO (theseusConfig >>= \c -> return $ theseusHomePage c)
     codeMaybe <- C.lookupGetParam "code"
     stateMaybe <- C.lookupGetParam "state"
     case codeMaybe of
@@ -41,25 +46,31 @@ getGithubCallbackR = do
                 Just state -> state
                 Nothing -> T.pack homePage
         Nothing -> C.redirect LoginR
-    
+
     where
         processCode :: String -> C.HandlerT App IO String
         processCode code = do
-            let opts = defaults 
-                                    & param "code" .~ [T.pack code] 
-                                    & param "client_id" .~ [T.pack clientID] 
-                                    & param "client_secret" .~ [T.pack clientSecret] 
+            tokenUrl <- liftIO (theseusConfig >>= \c -> return $ githubTokenUrl c)
+            backUrl <- liftIO (theseusConfig >>= \c -> return $ githubBackUrl c)
+            clientID <- liftIO (theseusConfig >>= \c -> return $ githubClientID c)
+            clientSecret <- liftIO (theseusConfig >>= \c -> return $ githubClientSecret c)
+            let opts = defaults
+                                    & param "code" .~ [T.pack code]
+                                    & param "client_id" .~ [T.pack clientID]
+                                    & param "client_secret" .~ [T.pack clientSecret]
                                     & param "redirect_uri" .~ [T.pack backUrl]
                                     & header "Accept" .~ ["application/json"]
-            resp <- liftIO $ getWith opts githubTokenUrl
+            resp <- liftIO $ getWith opts tokenUrl
             case (resp ^. responseBody . key "access_token" . _String) of
                 "" -> return ""
                 token -> return (T.unpack token)
 
         processToken :: String -> C.HandlerT App IO String
         processToken token = do
+            dbInterface <- liftIO (theseusConfig >>= \c -> return $ theseusDBInterface c)
+            userUrl<- liftIO (theseusConfig >>= \c -> return $ githubUserUrl c)
             let opts = defaults & param "access_token" .~ [T.pack token]
-            resp <- liftIO $ getWith opts githubUserUrl
+            resp <- liftIO $ getWith opts userUrl
             let name = resp ^. responseBody . key "login" . _String
             let email = resp ^. responseBody . key "email" . _String
             let avatar = resp ^. responseBody . key "avatar_url" . _String
@@ -72,10 +83,11 @@ getGithubCallbackR = do
                                                       , "avatar" .= avatar
                                                       ]
             return infoStr
-            
+
         setUserInfo :: String -> C.HandlerT App IO ()
         setUserInfo info = do
-            let c = def { 
+            userInfoKey <- liftIO (theseusConfig >>= \c -> return $ theseusUserInfoKey c)
+            let c = def {
                 setCookieName = B.pack userInfoKey,
                 setCookieValue = B.pack info,
                 setCookiePath = Just "/",
