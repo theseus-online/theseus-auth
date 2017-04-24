@@ -19,6 +19,7 @@ data Config = Config
             , theseusDBInterface :: String
             , theseusHomePage :: String
             , theseusDomain :: String
+            , signatureKey :: String
             } deriving (Show)
 
 instance FromJSON Config where
@@ -33,6 +34,7 @@ instance FromJSON Config where
                          <*> o .:? "theseus-db-interface" .!= "http://db.theseus-online"
                          <*> o .:? "theseus-home-page" .!= "http://theseus.online"
                          <*> o .:? "theseus-domain" .!= "theseus.online"
+                         <*> o .: "signature-key"
     parseJSON _ = error "parse config failed: expect object"
 
 globalConfig :: MVar Config

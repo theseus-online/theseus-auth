@@ -14,6 +14,10 @@ import qualified Yesod.Core as C
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as LB
 import qualified Data.Text as T
+import Data.Time.Clock.POSIX (getPOSIXTime)
+import qualified Crypto.Hash.SHA1 as SHA1
+import Data.Text.Encoding (encodeUtf8)
+import qualified Data.ByteString.Base16 as H
 
 getLoginR :: Handler C.Html
 getLoginR = do
@@ -78,9 +82,16 @@ getGithubCallbackR = do
                                                                              , "email" := email
                                                                              , "avatar" := avatar
                                                                              ]
+            timeStamp <- liftIO $ getPOSIXTime >>= (return . round)
+            sigKey <- liftIO (theseusConfig >>= \c -> return $ signatureKey c)
+            let signature = SHA1.finalize
+                          $ SHA1.updates SHA1.init
+                          $ map encodeUtf8 [name, email, avatar, (T.pack . show) timeStamp, T.pack sigKey]
             let infoStr = LB.unpack $ encode $ object [ "name" .= name
                                                       , "email" .= email
                                                       , "avatar" .= avatar
+                                                      , "timestamp" .= (T.pack . show) timeStamp
+                                                      , "signature" .= (B.unpack . H.encode) signature
                                                       ]
             return infoStr
 

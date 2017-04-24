@@ -26,6 +26,7 @@ executable          theseus-auth
                 , lens
                 , lens-aeson
                 , mtl
-                , cipher-aes
                 , yaml
                 , optparse-applicative
+                , cryptohash
+                , base16-bytestring
