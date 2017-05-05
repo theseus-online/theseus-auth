@@ -16,7 +16,7 @@ data Config = Config
             , githubTokenUrl :: String
             , githubUserUrl :: String
             , theseusUserInfoKey :: String
-            , theseusDBInterface :: String
+            , theseusApiBackend :: String
             , theseusHomePage :: String
             , theseusDomain :: String
             , signatureKey :: String
@@ -31,7 +31,7 @@ instance FromJSON Config where
                          <*> o .:? "github-token-url" .!= "https://github.com/login/oauth/access_token"
                          <*> o .:? "github-user-url" .!= "https://api.github.com/user"
                          <*> o .:? "theseus-userinfo-key" .!= "theseus-userinfo"
-                         <*> o .:? "theseus-db-interface" .!= "http://db.theseus-online"
+                         <*> o .:? "theseus-api-backend" .!= "http://localhost:8080"
                          <*> o .:? "theseus-home-page" .!= "http://theseus.online"
                          <*> o .:? "theseus-domain" .!= "theseus.online"
                          <*> o .: "signature-key"

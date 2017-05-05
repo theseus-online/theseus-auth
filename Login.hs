@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Login where
 
 import Settings
@@ -8,7 +10,7 @@ import Data.Aeson (object, (.=), encode)
 import Data.Aeson.Lens (_String, key)
 import Control.Monad.Trans (liftIO)
 import Control.Lens ((.~), (^.), (&))
-import Network.Wreq (FormParam((:=)), param, defaults, responseBody, getWith, header, post)
+import Network.Wreq (param, defaults, responseBody, getWith, header, put)
 import Web.Cookie (setCookieName, setCookiePath, setCookieValue, setCookieMaxAge, def)
 import qualified Yesod.Core as C
 import qualified Data.ByteString.Char8 as B
@@ -71,18 +73,18 @@ getGithubCallbackR = do
 
         processToken :: String -> C.HandlerT App IO String
         processToken token = do
-            dbInterface <- liftIO (theseusConfig >>= \c -> return $ theseusDBInterface c)
+            api <- liftIO (theseusConfig >>= \c -> return $ theseusApiBackend c)
             userUrl<- liftIO (theseusConfig >>= \c -> return $ githubUserUrl c)
             let opts = defaults & param "access_token" .~ [T.pack token]
             resp <- liftIO $ getWith opts userUrl
             let name = resp ^. responseBody . key "login" . _String
             let email = resp ^. responseBody . key "email" . _String
             let avatar = resp ^. responseBody . key "avatar_url" . _String
-            _ <- liftIO $ post (dbInterface ++ "/rpc/create_or_update_user") [ "name" := name
-                                                                             , "email" := email
-                                                                             , "avatar" := avatar
+            _ <- liftIO $ put (api ++ "/users/" ++ (T.unpack name)) $ object [ "name" .= name
+                                                                             , "email" .= email
+                                                                             , "avatar" .= avatar
                                                                              ]
-            timeStamp <- liftIO $ getPOSIXTime >>= (return . round)
+            (timeStamp :: Integer) <- liftIO $ getPOSIXTime >>= (return . round)
             sigKey <- liftIO (theseusConfig >>= \c -> return $ signatureKey c)
             let signature = SHA1.finalize
                           $ SHA1.updates SHA1.init
